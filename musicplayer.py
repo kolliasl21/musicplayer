@@ -121,7 +121,7 @@ class Musicplayer:
         self._p = None
 
         if supported_files is None:
-            self._supported_files = ['.mp3', '.wma', '.m4a', '.webm', '.mkv']
+            self._supported_files = ['.mp3', '.wma', '.m4a', '.webm', '.mkv', '.wav']
         else:
             self._supported_files = supported_files
 
@@ -269,7 +269,7 @@ def load_musicplayer(pq, filepath, current_audio_file, timer_start, timer_stop):
     time_start = time.time()
     my_print(current_audio_file)
     try:
-       while (((time.time() - time_start) < (p.duration-fade)) \
+        while (((time.time() - time_start) < (pq.duration-fade)) \
                 or disable_fade) and pq.poll() is None:
             if get_sleep_status(timer_start, timer_stop) \
                 and force_kill_subprocess:
@@ -476,7 +476,7 @@ if __name__ == '__main__':
     playlist_mode = args.playlist
     enable_log = args.enable_log
     log_file_name = args.rename_log
-    supported_audio_files = ['.mp3', '.wma', '.m4a', '.webm', '.mkv']
+    supported_audio_files = ['.mp3', '.wma', '.m4a', '.webm', '.mkv', '.wav']
     supported_txt_files = ['.genre.txt']
     start_time, stop_time = args.timer
     force_kill_subprocess = args.wait

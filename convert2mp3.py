@@ -180,7 +180,7 @@ if __name__ == '__main__':
         subprocess_limit = max_subprocess_limit
     output_files = []
     process_list = []
-    supported_files = [".mp3", ".wma", ".m4a", ".webm"]
+    supported_files = [".mp3", ".wma", ".m4a", ".webm", ".wav"]
     directory = 'normalized'
     normalized_mode = args.mode
     argument_index = 1
