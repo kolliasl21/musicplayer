@@ -151,6 +151,8 @@ def main():
     if enable_log:
         print_to_file(log_file, 'Done')
 
+    cleanup([f for f in output_files if f not in completed_files])
+
 
 if __name__ == '__main__':
 

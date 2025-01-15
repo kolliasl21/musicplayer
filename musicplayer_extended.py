@@ -127,6 +127,7 @@ class Musicplayer:
         else:
             self._supported_files = supported_files
 
+
     def set_media(self, audio_file):
         self.args_list[self.__audio_file_index] = audio_file
         self.audio_file = audio_file
