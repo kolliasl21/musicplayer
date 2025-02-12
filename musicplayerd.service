@@ -1,0 +1,10 @@
+[Unit]
+Description=Musicplayer daemon
+Wants=sound.target
+After=sound.target
+
+[Service]
+ExecStart=/bin/bash /home/user/scripts/musicplayer.sh
+
+[Install]
+WantedBy=default.target

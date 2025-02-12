@@ -1,0 +1,11 @@
+[Unit]
+Description=Musicplayer timer 
+
+[Timer]
+Unit=musicplayerd.service
+AccuracySec=1s
+OnCalendar=*-*-* 05:10:00  # trigger daily at 05:10am
+Persistent=true
+
+[Install]
+WantedBy=timers.target

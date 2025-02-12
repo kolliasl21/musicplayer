@@ -1,0 +1,10 @@
+[Unit]
+Description=Automatic volume controller daemon
+Wants=sound.target
+After=sound.target
+
+[Service]
+ExecStart=/home/user/scripts/volume_controller.py 03:10 21:00 0 85 4 10 900
+
+[Install]
+WantedBy=default.target
