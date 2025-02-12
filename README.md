@@ -15,4 +15,4 @@ transcoding.
 - Reload systemd daemons: $ systemctl --user daemon-reload
 - Enable timer: $ systemctl --user enable musicplayerd.timer --now
 - Enable services: $ systemctl --user enable volume-controller.service musicplayerd.service --now
-- Start services if auto-login is disabled: loginctl enable-linger user
+- Start services if auto-login is disabled: $ loginctl enable-linger user
