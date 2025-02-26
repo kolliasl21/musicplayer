@@ -82,17 +82,11 @@ def select_func(input_file, output_file):
 
 
 def update_completed_files():
-    if directory == 'output_files':
-        if enable_log:
-            [print_to_file(log_file, os.path.splitext(p.args[2])[0]+'.mp3') for p in process_list if p.poll() == 0]
-        return [completed_files.append(p.args[3]) for p in process_list if p.poll() == 0]
-    if directory == 'fade':
-        if enable_log:
-            [print_to_file(log_file, os.path.splitext(p.args[2])[0]+'.mp3') for p in process_list if p.poll() == 0]
-        return [completed_files.append(p.args[5]) for p in process_list if p.poll() == 0]
     if enable_log:
-        [print_to_file(log_file, os.path.splitext(p.args[1])[0]+'.mp3') for p in process_list if p.poll() == 0]
-    return [completed_files.append(os.path.join(target_directory, os.path.splitext(p.args[1])[0]+'.mp3')) for p in process_list if p.poll() == 0]
+        [print_to_file(log_file, os.path.splitext(p.args[argument_index_list[0]])[0]+'.mp3') for p in process_list if p.poll() == 0]
+    if directory == 'normalized':
+        return [completed_files.append(os.path.join(target_directory, os.path.splitext(p.args[argument_index_list[1]])[0]+'.mp3')) for p in process_list if p.poll() == 0]
+    return [completed_files.append(p.args[argument_index_list[1]]) for p in process_list if p.poll() == 0]
 
 
 def draw_progress_bar(status):
@@ -134,7 +128,7 @@ def main():
                     temp_list = [p for p in process_list if p.poll() is None]
                     time.sleep(0.01)
                 if verbose > 0 and proc.poll() is not None:
-                    my_print('Return code: {:3}, Output file: {}'.format(proc.returncode, proc.args[argument_index]))
+                    my_print('Return code: {:3}, Output file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
             update_completed_files()
             process_list[:] = [p for p in temp_list if p.poll() is None]
 
@@ -143,7 +137,7 @@ def main():
         draw_progress_bar(status)
         proc.wait()
         if verbose > 0 and proc.poll() is not None:
-            my_print('Return code: {:3}, Output file: {}'.format(proc.returncode, proc.args[argument_index]))
+            my_print('Return code: {:3}, Output file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
     update_completed_files()
 
     draw_progress_bar(100)
@@ -185,7 +179,7 @@ if __name__ == '__main__':
     supported_files = [".mp3", ".wma", ".m4a", ".webm", ".wav"]
     directory = 'normalized'
     normalized_mode = args.mode
-    argument_index = 1
+    argument_index_list = [1, 1]
     fade_in = abs(args.fade_in)
     fade_out = abs(args.fade_out)
     enable_log = args.enable_log
@@ -195,10 +189,10 @@ if __name__ == '__main__':
 
     if args.output == 'default':
         directory = 'output_files'
-        argument_index = 2
+        argument_index_list = [2, 3]
     elif args.output == 'fade':
         directory = 'fade'
-        argument_index = 2
+        argument_index_list = [2, 5]
 
     if enable_log and not os.path.exists(log_file):
         open(log_file, 'w').close()
@@ -228,7 +222,7 @@ if __name__ == '__main__':
         if enable_log:
             print_to_file(log_file, 'Program interrupted')
         if verbose > 0:
-            [my_print('Return code: {:3}, Output file: {}'.format(p.returncode, p.args[argument_index])) for p in process_list if p.poll() is not None]
+            [my_print('Return code: {:3}, Output file: {}'.format(p.returncode, p.args[argument_index_list[0]])) for p in process_list if p.poll() is not None]
         if not args.clean:
             output_files = [f for f in output_files if f not in completed_files]
         my_print('cleaning up...')
