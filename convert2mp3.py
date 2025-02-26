@@ -37,7 +37,7 @@ def get_audio_file_duration(audio_file):
     return duration
 
 
-def normalize_files(input_file, mode):
+def normalize_files(input_file, output_file, mode):
     return subprocess.Popen([
         'ffmpeg-normalize',
         input_file,
@@ -49,6 +49,8 @@ def normalize_files(input_file, mode):
         '128k',
         '-ext',
         'mp3',
+        '-o',
+        output_file
     ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 
 
@@ -78,14 +80,12 @@ def select_func(input_file, output_file):
         return convert_files(input_file, output_file)
     elif directory == 'fade':
         return audio_fade(input_file, output_file, fade_in, fade_out)
-    return normalize_files(input_file, normalized_mode)
+    return normalize_files(input_file, output_file, normalized_mode)
 
 
 def update_completed_files():
     if enable_log:
         [print_to_file(log_file, os.path.splitext(p.args[argument_index_list[0]])[0]+'.mp3') for p in process_list if p.poll() == 0]
-    if directory == 'normalized':
-        return [completed_files.append(os.path.join(target_directory, os.path.splitext(p.args[argument_index_list[1]])[0]+'.mp3')) for p in process_list if p.poll() == 0]
     return [completed_files.append(p.args[argument_index_list[1]]) for p in process_list if p.poll() == 0]
 
 
@@ -179,7 +179,7 @@ if __name__ == '__main__':
     supported_files = [".mp3", ".wma", ".m4a", ".webm", ".wav"]
     directory = 'normalized'
     normalized_mode = args.mode
-    argument_index_list = [1, 1]
+    argument_index_list = [1, 11]
     fade_in = abs(args.fade_in)
     fade_out = abs(args.fade_out)
     enable_log = args.enable_log
