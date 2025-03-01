@@ -18,8 +18,8 @@ def cleanup(files):
     [os.remove(f) for f in files if os.path.isfile(f)]
 
 
-def remove_empty_directory(directory):
-    [os.removedirs(directory) for _ in [directory] if os.path.exists(directory) and not os.listdir(directory)]
+def remove_empty_directories(*directories):
+    [os.removedirs(directory) for directory in directories if os.path.exists(directory) and not os.listdir(directory)]
 
 
 def get_audio_file_duration(audio_file):
@@ -107,7 +107,7 @@ def main():
     file_count = len(files)
     completed_file_count = len(completed_files)
     if file_count == 0:
-        remove_empty_directory(target_directory)
+        remove_empty_directories(target_directory)
         raise SystemExit('No files found... Raising SystemExit')
 
     my_print('Converting files to .mp3 with {} option...'.format(args.output))
@@ -227,7 +227,7 @@ if __name__ == '__main__':
             output_files = [f for f in output_files if f not in completed_files]
         my_print('cleaning up...')
         cleanup(output_files)
-        remove_empty_directory(target_directory)
+        remove_empty_directories(target_directory)
         raise SystemExit(0)
     except Exception as e:
         my_print('Exception encountered:', e)
