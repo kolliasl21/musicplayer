@@ -11,7 +11,7 @@ transcoding.
 
 ## Enable services
 
-- Create .timer and .service files in /etc/systemd/user/
+- Create .timer and .service files in ~/.config/systemd/user/
 - Reload systemd daemons: $ systemctl --user daemon-reload
 - Enable timer: $ systemctl --user enable musicplayerd.timer --now
 - Enable services: $ systemctl --user enable volume-controller.service musicplayerd.service --now
