@@ -103,7 +103,6 @@ def draw_progress_bar(status):
 
 def main():
     start_time = time.time()
-    files = get_files(os.getcwd(), supported_files)
     file_count = len(files)
     completed_file_count = len(completed_files)
     if file_count == 0:
@@ -111,7 +110,7 @@ def main():
         raise SystemExit('No files found... Raising SystemExit')
 
     my_print('Converting files to .mp3 with {} option...'.format(args.output))
-    files = [f for f in files if f not in completed_files]
+    files[:] = [f for f in files if os.path.splitext(f)[0] not in [os.path.splitext(p)[0] for p in completed_files]]
     # completed_files[:] = [os.path.join(target_directory, f) for f in completed_files]
     if enable_log:
         [print_to_file(log_file, f) for f in completed_files]
@@ -128,7 +127,7 @@ def main():
                     temp_list = [p for p in process_list if p.poll() is None]
                     time.sleep(0.01)
                 if verbose > 0 and proc.poll() is not None:
-                    my_print('Return code: {:3}, Output file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
+                    my_print('Return code: {:3}, Processed file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
             update_completed_files()
             process_list[:] = [p for p in temp_list if p.poll() is None]
 
@@ -137,7 +136,7 @@ def main():
         draw_progress_bar(status)
         proc.wait()
         if verbose > 0 and proc.poll() is not None:
-            my_print('Return code: {:3}, Output file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
+            my_print('Return code: {:3}, Processed file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
     update_completed_files()
 
     draw_progress_bar(100)
@@ -207,7 +206,8 @@ if __name__ == '__main__':
     if not os.path.isdir(target_directory):
         os.mkdir(target_directory)
 
-    completed_files = get_files(target_directory, supported_files)
+    files = get_files(os.getcwd(), supported_files)
+    completed_files = [f for f in files if os.path.splitext(f)[0] in [os.path.splitext(p)[0] for p in get_files(target_directory, supported_files)]]
 
     try:
         main()
@@ -222,7 +222,7 @@ if __name__ == '__main__':
         if enable_log:
             print_to_file(log_file, 'Program interrupted')
         if verbose > 0:
-            [my_print('Return code: {:3}, Output file: {}'.format(p.returncode, p.args[argument_index_list[0]])) for p in process_list if p.poll() is not None]
+            [my_print('Return code: {:3}, Processed file: {}'.format(p.returncode, p.args[argument_index_list[0]])) for p in process_list if p.poll() is not None]
         if not args.clean:
             output_files = [f for f in output_files if f not in completed_files]
         my_print('cleaning up...')
