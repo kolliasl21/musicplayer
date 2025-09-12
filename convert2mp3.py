@@ -86,7 +86,7 @@ def select_func(input_file, output_file):
 def update_completed_files():
     if enable_log:
         [print_to_file(log_file, os.path.splitext(p.args[argument_index_list[0]])[0]+'.mp3') for p in process_list if p.poll() == 0]
-    return [completed_files.append(p.args[argument_index_list[1]]) for p in process_list if p.poll() == 0]
+    [completed_files.append(p.args[argument_index_list[1]]) for p in process_list if p.poll() == 0]
 
 
 def draw_progress_bar(status):
