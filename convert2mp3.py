@@ -6,6 +6,7 @@ import time
 from musicplayer import get_audio_files as get_files
 from musicplayer import print_to_file
 import argparse
+from threading import Thread
 
 
 def my_print(*args, **kwargs):
@@ -22,15 +23,54 @@ def remove_empty_directories(*directories):
     [os.removedirs(directory) for directory in directories if os.path.exists(directory) and not os.listdir(directory)]
 
 
+def get_bitrate_or_samplerate_int(stream_opt, audio_file):
+    result = subprocess.run([
+        'ffprobe',
+        '-v',
+        'error',
+        '-select_streams',
+        'a:0',
+        '-show_entries',
+        'stream='+str(stream_opt),
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        audio_file
+    ], capture_output=True, text=True)
+    return int(result.stdout)
+
+
+def get_bitrate_and_samplerate_raw(audio_file):
+    result = subprocess.run([
+        'ffprobe',
+        '-v',
+        'error',
+        '-select_streams',
+        'a:0',
+        '-show_entries',
+        'stream=bit_rate',
+        '-show_entries',
+        'stream=sample_rate',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        audio_file
+    ], capture_output=True, text=True)
+    return result.stdout
+
+
+def print_bitrate_info(audio_file):
+    output = get_bitrate_and_samplerate_raw(audio_file)
+    print(output.replace('\n', ' '), audio_file)
+
+
 def get_audio_file_duration(audio_file):
     result = subprocess.run([
-       'ffprobe',
-       '-v',
-       'error',
-       '-show_entries',
-       'format=duration',
-       '-of',
-       'default=noprint_wrappers=1:nokey=1',
+        'ffprobe',
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
         audio_file
     ], capture_output=True, text=True)
     duration = float(result.stdout)
@@ -73,6 +113,24 @@ def convert_files(input_file, output_file):
         input_file,
         output_file
     ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+
+
+def scan_audio_files(audio_files):
+    thread_list = []
+    proc_list = []
+    for file in audio_files:
+        thread = Thread(target=print_bitrate_info, args=(file,))
+        thread_list.append(thread)
+        thread.start()
+        for thread in thread_list:
+            proc_list = [p for p in thread_list if p.is_alive()]
+            while (len(proc_list) > subprocess_limit - 1):
+                proc_list = [p for p in thread_list if p.is_alive()]
+                time.sleep(0.01)
+        thread_list[:] = [p for p in proc_list if p.is_alive()]
+
+    for thread in thread_list:
+        thread.join()
 
 
 def select_func(input_file, output_file):
@@ -154,7 +212,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(prog='convert2mp3', description='Convert audio files to .mp3 files',
                                      epilog='')
-    parser.add_argument('-o', '--output', choices=['default', 'normalized', 'fade'], default='default',
+    parser.add_argument('-o', '--output', choices=['default', 'normalized', 'fade', 'scan'], default='default',
                         help='normalized option: Normalizes volume on all audio files')
     parser.add_argument('-m', '--mode', choices=['ebu', 'rms', 'peak'], default='ebu', help='Normalized modes, default=ebu')
     parser.add_argument('-l', '--limit', type=int, default=cpu_count,
@@ -186,12 +244,26 @@ if __name__ == '__main__':
     log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), log_file_name)
     reset_log_at_startup = True
 
+    files = get_files(os.getcwd(), supported_files)
+
     if args.output == 'default':
         directory = 'output_files'
         argument_index_list = [2, 3]
     elif args.output == 'fade':
         directory = 'fade'
         argument_index_list = [2, 5]
+    elif args.output == 'scan':
+        try:
+            scan_audio_files(files)
+            raise SystemExit(0)
+        except KeyboardInterrupt:
+            print('Program interrupted')
+            raise SystemExit(0)
+        except Exception as e:
+            print('Exception encountered:', e)
+            raise SystemExit(1)
+
+    target_directory = os.path.join(os.getcwd(), directory)
 
     if enable_log and not os.path.exists(log_file):
         open(log_file, 'w').close()
@@ -199,14 +271,12 @@ if __name__ == '__main__':
     if reset_log_at_startup and os.path.exists(log_file):
         open(log_file, 'w').close()
 
-    target_directory = os.path.join(os.getcwd(), directory)
     if enable_log:
         open(log_file, 'a', encoding='utf-8').writelines('Completed files in {}\n'.format(target_directory))
 
     if not os.path.isdir(target_directory):
         os.mkdir(target_directory)
 
-    files = get_files(os.getcwd(), supported_files)
     completed_files = [f for f in files if os.path.splitext(f)[0] in [os.path.splitext(p)[0] for p in get_files(target_directory, supported_files)]]
 
     try:
@@ -227,8 +297,9 @@ if __name__ == '__main__':
             output_files = [f for f in output_files if f not in completed_files]
         my_print('cleaning up...')
         cleanup(output_files)
-        remove_empty_directories(target_directory)
         raise SystemExit(0)
     except Exception as e:
         my_print('Exception encountered:', e)
         raise SystemExit(1)
+    finally:
+        remove_empty_directories(target_directory)
