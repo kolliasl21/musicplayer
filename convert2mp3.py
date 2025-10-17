@@ -202,7 +202,7 @@ def main():
     if enable_log:
         print_to_file(log_file, 'Done')
 
-    cleanup([f for f in output_files if f not in completed_files])
+    output_files[:] = [f for f in output_files if f not in completed_files]
 
 
 if __name__ == '__main__':
@@ -295,11 +295,11 @@ if __name__ == '__main__':
             [my_print('Return code: {:3}, Processed file: {}'.format(p.returncode, p.args[argument_index_list[0]])) for p in process_list if p.poll() is not None]
         if not args.clean:
             output_files = [f for f in output_files if f not in completed_files]
-        my_print('cleaning up...')
-        cleanup(output_files)
         raise SystemExit(0)
     except Exception as e:
         my_print('Exception encountered:', e)
+        output_files = [f for f in output_files if f not in completed_files]
         raise SystemExit(1)
     finally:
+        cleanup(output_files)
         remove_empty_directories(target_directory)
