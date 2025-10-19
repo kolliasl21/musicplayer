@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 import os
-import sys
 import argparse
 import pathlib
 from musicplayer import get_file_list
@@ -21,7 +20,7 @@ def main():
     if not args.keep:
         [os.remove(f) for f in file_list if os.path.isfile(f)]
     else:
-        [os.remove(f) for f in get_audio_files(os.getcwd(), supported_audio_files) if not f in file_list]
+        [os.remove(f) for f in get_audio_files(os.getcwd(), supported_audio_files) if f not in file_list]
 
 
 if __name__ == '__main__':
