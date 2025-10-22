@@ -150,12 +150,12 @@ def update_completed_files():
 def draw_progress_bar(status):
     bar_lenght = 40
     bar = int((status*bar_lenght)/100)
-    end_ln='\r'
+    end_ln = '\r'
     if status < 0:
         my_print('{}'.format(' '*(bar_lenght+10)), end=end_ln)
         return None
     if status == 100:
-        end_ln='\n'
+        end_ln = '\n'
     my_print('[{:<{}}] {:.2f}%'.format('='*bar, bar_lenght, status), end=end_ln)
 
 
@@ -164,7 +164,6 @@ def main():
     file_count = len(files)
     completed_file_count = len(completed_files)
     if file_count == 0:
-        remove_empty_directories(target_directory)
         raise SystemExit('No files found... Raising SystemExit')
 
     my_print('Converting files to .mp3 with {} option...'.format(args.output))
