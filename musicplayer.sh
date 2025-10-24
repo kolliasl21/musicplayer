@@ -3,7 +3,16 @@
 DAY=$(date | awk '{print $1}')
 
 musicplayer() {
-        /home/user/scripts/musicplayer.py /home/user/"$1" -r -vv -p ffplay -t "$2" "$3" --no-controls --fade 5 --enable-log --terminate $4
+        /home/user/scripts/musicplayer.py \
+                /home/user/"$1" \
+                -r \
+                -vv \
+                -p ffplay \
+                -t "$2" "$3" \
+                --no-controls \
+                --fade 5 \
+                --enable-log \
+                --terminate $4
 }
 
 if   [[ $DAY == 'Tue' || $DAY == 'Thu' ]]; then

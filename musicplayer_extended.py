@@ -43,7 +43,8 @@ def trim_log_file(log_file, minimum_lines, maximum_lines):
 
 
 def create_link():
-    if not create_log_file_link or not enable_log or not os.path.exists(log_file):
+    if not create_log_file_link or not enable_log \
+            or not os.path.exists(log_file):
         return None
     try:
         if not os.path.exists(link_file):
@@ -53,7 +54,8 @@ def create_link():
 
 
 def get_audio_files(filepath, input_list):
-    audio_files = [f for f in os.listdir(filepath) if any(f.endswith(ext) for ext in input_list)]
+    audio_files = [f for f in os.listdir(filepath)
+                   if any(f.endswith(ext) for ext in input_list)]
     audio_files.sort()
     return audio_files
 
@@ -62,7 +64,10 @@ def get_file_list(file, file_extensions):
     audio_files = []
     if os.path.isfile(file):
         with open(file, 'r', encoding='utf-8') as fp:
-            audio_files = [line.rstrip() for line in fp if any(line.rstrip().endswith(ext) for ext in file_extensions)]
+            audio_files = [
+                    line.rstrip() for line in fp
+                    if any(line.rstrip().endswith(ext)
+                           for ext in file_extensions)]
             audio_files.sort()
     return audio_files
 
@@ -74,7 +79,10 @@ def sort_file_lists(filepath):
     genre_files.append('favorites.txt')
     if genre_files:
         for file in genre_files:
-            write_list_to_file(os.path.join(filepath, str(file)), get_file_list(os.path.join(filepath, str(file)), supported_audio_files))
+            write_list_to_file(
+                    os.path.join(filepath, str(file)),
+                    get_file_list(os.path.join(
+                        filepath, str(file)), supported_audio_files))
         if sort_files == 'exit':
             raise SystemExit(0)
 
@@ -111,11 +119,11 @@ class Musicplayer:
 
     import subprocess
 
-
     def __init__(self, audio_gain: float = 1.0, supported_files: list = None):
         self.audio_gain = audio_gain
         self.args_list = [None]
-        self.kwargs = {'stdout': open(os.devnull, 'w'), 'stderr': open(os.devnull, 'w')}
+        self.kwargs = {'stdout': open(os.devnull, 'w'),
+                       'stderr': open(os.devnull, 'w')}
         self.audio_file = 'audio_file'
         self.duration = 0
         self.__audio_file_index = 0
@@ -123,10 +131,10 @@ class Musicplayer:
         self._p = None
 
         if supported_files is None:
-            self._supported_files = ['.mp3', '.wma', '.m4a', '.webm', '.mkv', '.wav', '.mp4'] 
+            self._supported_files = ['.mp3', '.wma', '.m4a',
+                                     '.webm', '.mkv', '.wav', '.mp4']
         else:
             self._supported_files = supported_files
-
 
     def set_media(self, audio_file):
         self.args_list[self.__audio_file_index] = audio_file
@@ -135,7 +143,6 @@ class Musicplayer:
             self.__set_duration(audio_file)
         if self.__duration_index > 0:
             self.args_list[self.__duration_index] = str(self.duration)
-
 
     def set_vlc(self, **kwargs):
         self.loop = '--no-loop'
@@ -205,7 +212,6 @@ class Musicplayer:
                 'ctrl+shift+w'
             ])
 
-
     def set_ffplay(self, **kwargs):
         self.loop = False
         self.enable_video = False
@@ -233,7 +239,6 @@ class Musicplayer:
                 '0'  # 0 infinite loop
             ])
 
-
     def __set_duration(self, audio_file):
         result = self.subprocess.run([
             'ffprobe',
@@ -246,7 +251,6 @@ class Musicplayer:
             audio_file
         ], capture_output=True, text=True)
         self.duration = float(result.stdout)
-
 
     def set_ffmpeg(self, **kwargs):
         self.loop = '-1'  # infinite loop
@@ -278,7 +282,6 @@ class Musicplayer:
         ])
         self.__audio_file_index = self.args_list.index(self.audio_file)
 
-
     def set_omxplayer(self, **kwargs):
         loop = False
         self.output = kwargs.get('output', 'alsa')
@@ -301,27 +304,24 @@ class Musicplayer:
         if loop:
             self.args_list.extend(['--loop'])
 
-
     def play(self):
         self._p = self.subprocess.Popen(self.args_list, **self.kwargs)
-
 
     def stop(self):
         if self._p is not None:
             self._p.kill()
 
-
     def wait(self):
         if self._p is not None:
             self._p.wait()
-
 
     def poll(self):
         if self._p is not None:
             return self._p.poll()
 
 
-def load_musicplayer(pq, filepath, current_audio_file, timer_start, timer_stop):
+def load_musicplayer(pq, filepath, current_audio_file, timer_start,
+                     timer_stop):
     current_path = os.path.join(filepath, current_audio_file)
 
     pq.set_media(current_path)
@@ -330,10 +330,10 @@ def load_musicplayer(pq, filepath, current_audio_file, timer_start, timer_stop):
     time_start = time.time()
     my_print(current_audio_file)
     try:
-        while (((time.time() - time_start) < (pq.duration-fade)) \
+        while (((time.time() - time_start) < (pq.duration-fade))
                 or disable_fade) and pq.poll() is None:
-            if get_sleep_status(timer_start, timer_stop) \
-                and force_kill_subprocess:
+            if get_sleep_status(timer_start, timer_stop) and \
+                    force_kill_subprocess:
                 pq.stop()
             time.sleep(0.1)  # poll every 100ms
     except KeyboardInterrupt:
@@ -347,20 +347,24 @@ def get_tracklist(filepath, audio_files, genre_files):
     track_list = audio_files
 
     if random_mode:
-        weight_list = get_file_list(os.path.join(filepath, 'favorites.txt'), supported_audio_files)
+        weight_list = get_file_list(
+                os.path.join(filepath, 'favorites.txt'), supported_audio_files)
         track_list.extend(item for item in weight_list for _ in range(weight))
         random.shuffle(track_list)
         if not genre_files:
             return track_list
         for file in genre_files:
-            genre_list = get_file_list(os.path.join(filepath, str(file)), supported_audio_files)
-            track_list = [item for item in track_list if item not in genre_list]
+            genre_list = get_file_list(
+                    os.path.join(filepath, str(file)), supported_audio_files)
+            track_list = [item for item in track_list
+                          if item not in genre_list]
             random.shuffle(genre_list)
             track_list.extend(genre_list)
     elif genre_files:
         temp_list = []
         for file in genre_files:
-            genre_list = get_file_list(os.path.join(filepath, str(file)), supported_audio_files)
+            genre_list = get_file_list(
+                    os.path.join(filepath, str(file)), supported_audio_files)
             track_list = list(set(track_list) - set(genre_list))
             genre_list = list(set(genre_list))
             genre_list.sort()
@@ -398,19 +402,24 @@ def main(p):
 
         if track in previous_tracks and len(audio_files) > list_len:
             if verbose > 0:
-                my_print('Skipping "{}" in previously played tracks list...'.format(track))
+                my_print('Skipping "{}" in previously played tracks list...'
+                         .format(track))
             if force_reload_list:
                 break
 
-        elif track in previous_tracks[-3:] and len(audio_files) > 9:  # fallback to checking last 3 played songs
+        # fallback to checking last 3 played songs
+        elif track in previous_tracks[-3:] and len(audio_files) > 9:
             if verbose > 0:
-                my_print('Skipping "{}" in last 3 previously played tracks list...'.format(track))
+                my_print('Skipping "{}" in last 3 '
+                         'previously played tracks list...'.format(track))
             if force_reload_list:
                 break
 
-        elif track in previous_tracks[-1] and len(audio_files) > 1:  # fallback to checking last played song
+        # fallback to checking last played song
+        elif track in previous_tracks[-1] and len(audio_files) > 1:
             if verbose > 0:
-                my_print('Skipping "{}" previously played track...'.format(track))
+                my_print('Skipping "{}" previously played track...'
+                         .format(track))
             if force_reload_list:
                 break
 
@@ -445,7 +454,8 @@ def main(p):
             my_print('playlist.m3u')
             time.sleep(2)
     elif playlist_mode:
-        my_print('Error: --playlist mode only available for VLC. Raising SystemExit')
+        my_print('Error: --playlist mode only available for VLC. '
+                 'Raising SystemExit')
         raise SystemExit(1)
 
     if no_reload:
@@ -458,8 +468,10 @@ def main(p):
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(prog='musicplayer', formatter_class=argparse.RawDescriptionHelpFormatter,
-                                     description=textwrap.dedent('''\
+    parser = argparse.ArgumentParser(
+            prog='musicplayer',
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            description=textwrap.dedent('''\
 
             Custom cli musicplayer
 
@@ -488,39 +500,70 @@ if __name__ == '__main__':
                   playlist.
 
             '''), epilog='')
-    parser.add_argument('path', type=pathlib.Path, help='Audio files directory')
-    parser.add_argument('-r', '--random', action='store_true', help='Random playback')
-    parser.add_argument('-p', '--player', choices=['vlc', 'ffplay', 'ffmpeg', 'omxplayer'], default='vlc',
-                        help='Default = vlc')
-    parser.add_argument('-o', '--output', choices=['alsa', 'local', 'hdmi', 'both'], default='alsa',
-                        help='Select omxplayer device output \"default omxplayer output = alsa\"')
-    parser.add_argument('-d', '--device', default='default', help='Select ffmpeg device output (hw:0,0, hdmi:0,0)')
+    parser.add_argument('path', type=pathlib.Path,
+                        help='Audio files directory')
+    parser.add_argument('-r', '--random', action='store_true',
+                        help='Random playback')
+    parser.add_argument('-p', '--player',
+                        choices=['vlc', 'ffplay', 'ffmpeg', 'omxplayer'],
+                        default='vlc', help='Default = vlc')
+    parser.add_argument('-o', '--output',
+                        choices=['alsa', 'local', 'hdmi', 'both'],
+                        default='alsa',
+                        help='Select omxplayer device output '
+                        '\"default omxplayer output = alsa\"')
+    parser.add_argument('-d', '--device', default='default',
+                        help='Select ffmpeg device output (hw:0,0, hdmi:0,0)')
     parser.add_argument('-l', '--list-len', type=int, default=20,
-                        help='Keep track of previously played audio files \"default size = 20\"')
-    parser.add_argument('-g', '--gain', type=float, default=1.00, help='Audio gain \"default GAIN = 1.00\"')
-    parser.add_argument('-f', '--fade', type=float, default=0.00, help='Crossfade (sedonds). Requires --no-controls \"default = 0.00\"')
-    parser.add_argument('-c', '--ctrl-c', action='store_true', help='Skip tracks with ctrl+c on cli')
-    parser.add_argument('-w', '--weight', type=int, default=1, help='WEIGHT*favorites.txt \"default WEIGHT = 1\"')
-    parser.add_argument('-v', '--verbose', action='count', default=0, help='Increase verbosity level')
-    parser.add_argument('-t', '--timer', metavar=('\"HH:MM\"', '\"HH:MM\"'), nargs=2, default=[None, None],
-                        help='Pause playback outside the specified time window')
-    parser.add_argument('--wait', action='store_false', help='Wait for track/playlist to finish before'
+                        help='Keep track of previously played audio files '
+                        '\"default size = 20\"')
+    parser.add_argument('-g', '--gain', type=float, default=1.00,
+                        help='Audio gain \"default GAIN = 1.00\"')
+    parser.add_argument('-f', '--fade', type=float, default=0.00,
+                        help='Crossfade (sedonds). Requires --no-controls '
+                        '\"default = 0.00\"')
+    parser.add_argument('-c', '--ctrl-c', action='store_true',
+                        help='Skip tracks with ctrl+c on cli')
+    parser.add_argument('-w', '--weight', type=int, default=1,
+                        help='WEIGHT*favorites.txt \"default WEIGHT = 1\"')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Increase verbosity level')
+    parser.add_argument('-t', '--timer', metavar=('\"HH:MM\"', '\"HH:MM\"'),
+                        nargs=2, default=[None, None],
+                        help='Pause playback outside the specified time window'
+                        )
+    parser.add_argument('--wait', action='store_false',
+                        help='Wait for track/playlist to finish before'
                         ' entering sleep mode')
-    parser.add_argument('--loop', action='store_true', help='Loop track or playlist.m3u')
+    parser.add_argument('--loop', action='store_true',
+                        help='Loop track or playlist.m3u')
     parser.add_argument('--repeat', action='store_true', help='Repeat track')
-    parser.add_argument('--shuffle', action='store_true', help='Shuffle VLC playlist')
-    parser.add_argument('--sort-files', choices=['startup', 'exit'], default=None,
-                        help='Sort *.txt files associated with this script \"at startup/and exit\"')
-    parser.add_argument('--playlist', action='store_true', help='Generate playlist.m3u and load vlc')
-    parser.add_argument('--no-reload', action='store_true', help='Play the tracklist once and exit')
+    parser.add_argument('--shuffle', action='store_true',
+                        help='Shuffle VLC playlist')
+    parser.add_argument('--sort-files', choices=['startup', 'exit'],
+                        default=None,
+                        help='Sort *.txt files associated with this script '
+                        '\"at startup/and exit\"')
+    parser.add_argument('--playlist', action='store_true',
+                        help='Generate playlist.m3u and load vlc')
+    parser.add_argument('--no-reload', action='store_true',
+                        help='Play the tracklist once and exit')
     parser.add_argument('--no-controls', action='store_true',
-                        help='Disable controls when running this script as a background service')
-    parser.add_argument('--dry-run', action='store_true', help='Print program output without playing music')
-    parser.add_argument('--enable-log', action='store_true', help='Log program output to musicplayer.log')
-    parser.add_argument('--rename-log', type=str, default='musicplayer.log', help='Rename log file')
-    parser.add_argument('--create-link', action='store_true', help='Create a link to log file in audio files directory')
-    parser.add_argument('--enable-video', action='store_true', help='Enable video playback')
-    parser.add_argument('--terminate', action='store_true', help='Terminate musicplayer when sleep mode activates')
+                        help='Disable controls when running this script as a '
+                        'background service')
+    parser.add_argument('--dry-run', action='store_true',
+                        help='Print program output without playing music')
+    parser.add_argument('--enable-log', action='store_true',
+                        help='Log program output to musicplayer.log')
+    parser.add_argument('--rename-log', type=str, default='musicplayer.log',
+                        help='Rename log file')
+    parser.add_argument('--create-link', action='store_true',
+                        help='Create a link to log file in audio files '
+                        'directory')
+    parser.add_argument('--enable-video', action='store_true',
+                        help='Enable video playback')
+    parser.add_argument('--terminate', action='store_true',
+                        help='Terminate musicplayer when sleep mode activates')
     args = parser.parse_args()
 
     path = os.path.abspath(args.path)
@@ -543,32 +586,46 @@ if __name__ == '__main__':
     playlist_mode = args.playlist
     enable_log = args.enable_log
     log_file_name = args.rename_log
-    supported_audio_files = ['.mp3', '.wma', '.m4a', '.webm', '.mkv', '.wav', '.mp4']
+    supported_audio_files = ['.mp3', '.wma', '.m4a',
+                             '.webm', '.mkv', '.wav', '.mp4']
     supported_txt_files = ['.genre.txt']
     start_time, stop_time = args.timer
     force_kill_subprocess = args.wait
     loop_playback = args.loop
     repeat_track = args.repeat
     shuffle_playback = args.shuffle
-    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), log_file_name)
+    log_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), log_file_name)
     link_file = os.path.join(path, log_file_name)
     disable_log_limit = False
     reset_log_at_startup = False
     create_log_file_link = args.create_link
     enable_video = args.enable_video
     terminate = args.terminate
-    disable_fade = ((enable_video or not no_controls or playlist_mode) or (loop_playback or repeat_track))
+    disable_fade = ((enable_video or not no_controls or playlist_mode)
+                    or (loop_playback or repeat_track))
 
     p = Musicplayer(gain, supported_audio_files)
 
     if musicplayer == 'vlc':
-        p.set_vlc(loop=loop_playback, repeat=repeat_track, random=shuffle_playback, enable_video=enable_video, no_controls=no_controls)
+        p.set_vlc(
+                loop=loop_playback,
+                repeat=repeat_track,
+                random=shuffle_playback,
+                enable_video=enable_video,
+                no_controls=no_controls)
     elif musicplayer == 'ffplay':
-        p.set_ffplay(loop=(loop_playback or repeat_track), enable_video=enable_video)
+        p.set_ffplay(
+                loop=(loop_playback or repeat_track),
+                enable_video=enable_video)
     elif musicplayer == 'ffmpeg':
-        p.set_ffmpeg(loop=(loop_playback or repeat_track), output_device=str(ffmpeg_output_device))
+        p.set_ffmpeg(
+                loop=(loop_playback or repeat_track),
+                output_device=str(ffmpeg_output_device))
     else:
-        p.set_omxplayer(loop=(loop_playback or repeat_track), output=str(omx_output))
+        p.set_omxplayer(
+                loop=(loop_playback or repeat_track),
+                output=str(omx_output))
 
     flag = False
     sort_file_lists(path)

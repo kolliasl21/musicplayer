@@ -11,6 +11,8 @@ from musicplayer import format_str_time
 def call_amixer_subprocess(current_volume):
     p = subprocess.Popen([
         'amixer',
+        '-D',
+        'pulse',
         'set',
         'Master',
         str(current_volume)+'%'
@@ -36,12 +38,18 @@ def set_volume(target_volume, current_volume, limit):
 
 
 def main():
-    current_volume = int(subprocess.check_output(command, shell=True, text=True))
+    current_volume = int(subprocess.check_output(
+        command, shell=True, text=True))
 
-    if not get_sleep_condition(format_str_time(start_time), format_str_time(ramp_down_time)):
-        current_volume = set_volume(min(current_volume+step_up, maximum_volume), current_volume, maximum_volume)
+    if not get_sleep_condition(
+            format_str_time(start_time), format_str_time(ramp_down_time)):
+        current_volume = set_volume(min(
+            current_volume+step_up, maximum_volume),
+                                    current_volume, maximum_volume)
     else:
-        current_volume = set_volume(max(current_volume-step_down, minimum_volume), current_volume, minimum_volume)
+        current_volume = set_volume(max(
+            current_volume-step_down, minimum_volume), current_volume,
+                                    minimum_volume)
 
     exit_func(exit_flag, current_volume, vol_dict.get(exit_flag))
     time.sleep(interval)
@@ -49,8 +57,9 @@ def main():
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(prog='volume controller', description='Automatic system volume controller',
-             epilog='')
+    parser = argparse.ArgumentParser(
+            prog='volume controller',
+            description='Automatic system volume controller', epilog='')
     parser.add_argument('time_window', nargs=2, help='\"HH:MM\" \"HH:MM\"')
     parser.add_argument('minimum_volume', type=int, help='Minimum volume')
     parser.add_argument('maximum_volume', type=int, help='Maximum volume')
@@ -61,7 +70,8 @@ if __name__ == '__main__':
                         help='Exit when maximum or minimum volume is set')
     args = parser.parse_args()
 
-    command = 'amixer sget Master | grep \'Right:\' | awk -F\'[][]\' \'{ print $2 }\' | cut -d% -f1'
+    command = 'amixer -D pulse sget Master | grep \'Right:\' | \
+            awk -F\'[][]\' \'{ print $2 }\' | cut -d% -f1'
     start_time, ramp_down_time = args.time_window
     minimum_volume = args.minimum_volume
     maximum_volume = args.maximum_volume
@@ -69,7 +79,7 @@ if __name__ == '__main__':
     step_down = args.step_down
     interval = args.interval
     exit_flag = args.exit
-    vol_dict = {'volmin':minimum_volume, 'volmax':maximum_volume}
+    vol_dict = {'volmin': minimum_volume, 'volmax': maximum_volume}
 
     try:
         while True:

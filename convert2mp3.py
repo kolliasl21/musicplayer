@@ -20,7 +20,8 @@ def cleanup(files):
 
 
 def remove_empty_directories(*directories):
-    [os.removedirs(directory) for directory in directories if os.path.exists(directory) and not os.listdir(directory)]
+    [os.removedirs(directory) for directory in directories
+     if os.path.exists(directory) and not os.listdir(directory)]
 
 
 def get_bitrate_or_samplerate_int(stream_opt, audio_file):
@@ -101,8 +102,10 @@ def audio_fade(input_file, output_file, fade_in_sec=2, fade_out_sec=2):
         '-i',
         input_file,
         '-af',
-        'afade=in:st=0:d='+str(fade_in_sec)+',afade=out:st='+str(duration-fade_out_sec)+':d='+str(fade_out_sec),
-        output_file
+        'afade=in:st=0:d='+str(fade_in_sec)+''
+        ',afade=out:st='+str(duration-fade_out_sec)+':d='+str(fade_out_sec),
+        output_file,
+        '-n'
     ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 
 
@@ -111,7 +114,8 @@ def convert_files(input_file, output_file):
         'ffmpeg',
         '-i',
         input_file,
-        output_file
+        output_file,
+        '-n'
     ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 
 
@@ -143,8 +147,12 @@ def select_func(input_file, output_file):
 
 def update_completed_files():
     if enable_log:
-        [print_to_file(log_file, os.path.splitext(p.args[argument_index_list[0]])[0]+'.mp3') for p in process_list if p.poll() == 0]
-    [completed_files.append(p.args[argument_index_list[1]]) for p in process_list if p.poll() == 0]
+        [print_to_file(
+            log_file, os.path.splitext(p.args[
+                argument_index_list[0]])[0]+'.mp3')
+         for p in process_list if p.poll() == 0]
+    [completed_files.append(p.args[argument_index_list[1]])
+     for p in process_list if p.poll() == 0]
 
 
 def draw_progress_bar(status):
@@ -156,7 +164,8 @@ def draw_progress_bar(status):
         return None
     if status == 100:
         end_ln = '\n'
-    my_print('[{:<{}}] {:.2f}%'.format('='*bar, bar_lenght, status), end=end_ln)
+    my_print('[{:<{}}] {:.2f}%'.format('='*bar, bar_lenght, status),
+             end=end_ln)
 
 
 def main():
@@ -167,8 +176,10 @@ def main():
         raise SystemExit('No files found... Raising SystemExit')
 
     my_print('Converting files to .mp3 with {} option...'.format(args.output))
-    files[:] = [f for f in files if os.path.splitext(f)[0] not in [os.path.splitext(p)[0] for p in completed_files]]
-    # completed_files[:] = [os.path.join(target_directory, f) for f in completed_files]
+    files[:] = [f for f in files if os.path.splitext(f)[0]
+                not in [os.path.splitext(p)[0] for p in completed_files]]
+    completed_files[:] = [os.path.join(target_directory, f)
+                          for f in completed_files]
     if enable_log:
         [print_to_file(log_file, f) for f in completed_files]
     for f in files:
@@ -177,23 +188,29 @@ def main():
         process_list.append(select_func(f, output))
         if len(process_list) > subprocess_limit - 1:
             for proc in process_list:
-                status = (((completed_file_count+len(output_files)-(len(process_list)))/file_count)*100)
+                status = (((completed_file_count+len(
+                    output_files)-(len(process_list)))/file_count)*100)
                 draw_progress_bar(status)
                 temp_list = [p for p in process_list if p.poll() is None]
                 while (len(temp_list) > subprocess_limit - 1):
                     temp_list = [p for p in process_list if p.poll() is None]
                     time.sleep(0.01)
                 if verbose > 0 and proc.poll() is not None:
-                    my_print('Return code: {:3}, Processed file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
+                    my_print('Return code: {:3}, Processed file: {}'
+                             .format(proc.returncode,
+                                     proc.args[argument_index_list[0]]))
             update_completed_files()
             process_list[:] = [p for p in temp_list if p.poll() is None]
 
     for proc in process_list:
-        status = (((completed_file_count+len(output_files)-(len(process_list)-process_list.index(proc)))/file_count)*100)
+        status = (((completed_file_count+len(output_files)-(
+            len(process_list)-process_list.index(proc)))/file_count)*100)
         draw_progress_bar(status)
         proc.wait()
         if verbose > 0 and proc.poll() is not None:
-            my_print('Return code: {:3}, Processed file: {}'.format(proc.returncode, proc.args[argument_index_list[0]]))
+            my_print('Return code: {:3}, Processed file: {}'
+                     .format(proc.returncode,
+                             proc.args[argument_index_list[0]]))
     update_completed_files()
 
     draw_progress_bar(100)
@@ -209,20 +226,30 @@ if __name__ == '__main__':
     cpu_count = os.cpu_count()
     max_subprocess_limit = cpu_count * 2
 
-    parser = argparse.ArgumentParser(prog='convert2mp3', description='Convert audio files to .mp3 files',
-                                     epilog='')
-    parser.add_argument('-o', '--output', choices=['default', 'normalized', 'fade', 'scan'], default='default',
-                        help='normalized option: Normalizes volume on all audio files')
-    parser.add_argument('-m', '--mode', choices=['ebu', 'rms', 'peak'], default='ebu', help='Normalized modes, default=ebu')
+    parser = argparse.ArgumentParser(
+            prog='convert2mp3',
+            description='Convert audio files to .mp3 files', epilog='')
+    parser.add_argument('-o', '--output', choices=['default', 'normalized',
+                                                   'fade', 'scan'],
+                        default='default', help='normalized option: Normalizes'
+                        ' volume on all audio files')
+    parser.add_argument('-m', '--mode', choices=['ebu', 'rms', 'peak'],
+                        default='ebu', help='Normalized modes, default=ebu')
     parser.add_argument('-l', '--limit', type=int, default=cpu_count,
                         help='limit subprocesses spawned')
     parser.add_argument('-c', '--clean', action='store_true',
-                        help='Clean target directory when manually interrupting the program')
-    parser.add_argument('-v', '--verbose', action='count', default=0, help='Increase verbosity level')
-    parser.add_argument('--fade-in', type=float, default=2.00, help='Fade-in (seconds). \"default = 2.00\"')
-    parser.add_argument('--fade-out', type=float, default=2.00, help='Fade-out (seconds). \"default = 2.00\"')
-    parser.add_argument('--enable-log', action='store_true', help='Log program output to convert2mp3.log')
-    parser.add_argument('--rename-log', type=str, default='convert2mp3.log', help='Rename log file')
+                        help='Clean target directory when manually '
+                        'interrupting the program')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Increase verbosity level')
+    parser.add_argument('--fade-in', type=float, default=2.00,
+                        help='Fade-in (seconds). \"default = 2.00\"')
+    parser.add_argument('--fade-out', type=float, default=2.00,
+                        help='Fade-out (seconds). \"default = 2.00\"')
+    parser.add_argument('--enable-log', action='store_true',
+                        help='Log program output to convert2mp3.log')
+    parser.add_argument('--rename-log', type=str, default='convert2mp3.log',
+                        help='Rename log file')
     args = parser.parse_args()
 
     verbose = args.verbose
@@ -240,7 +267,8 @@ if __name__ == '__main__':
     fade_out = abs(args.fade_out)
     enable_log = args.enable_log
     log_file_name = args.rename_log
-    log_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), log_file_name)
+    log_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), log_file_name)
     reset_log_at_startup = True
 
     files = get_files(os.getcwd(), supported_files)
@@ -271,12 +299,15 @@ if __name__ == '__main__':
         open(log_file, 'w').close()
 
     if enable_log:
-        open(log_file, 'a', encoding='utf-8').writelines('Completed files in {}\n'.format(target_directory))
+        open(log_file, 'a', encoding='utf-8').writelines(
+                'Completed files in {}\n'.format(target_directory))
 
     if not os.path.isdir(target_directory):
         os.mkdir(target_directory)
 
-    completed_files = [f for f in files if os.path.splitext(f)[0] in [os.path.splitext(p)[0] for p in get_files(target_directory, supported_files)]]
+    completed_files = [f for f in files if os.path.splitext(
+        f)[0] in [os.path.splitext(p)[0] for p in get_files(
+            target_directory, supported_files)]]
 
     try:
         main()
@@ -291,9 +322,13 @@ if __name__ == '__main__':
         if enable_log:
             print_to_file(log_file, 'Program interrupted')
         if verbose > 0:
-            [my_print('Return code: {:3}, Processed file: {}'.format(p.returncode, p.args[argument_index_list[0]])) for p in process_list if p.poll() is not None]
+            [my_print('Return code: {:3}, Processed file: {}'.format(
+                          p.returncode,
+                          p.args[argument_index_list[0]]))
+             for p in process_list if p.poll() is not None]
         if not args.clean:
-            output_files = [f for f in output_files if f not in completed_files]
+            output_files = [f for f in output_files
+                            if f not in completed_files]
         raise SystemExit(0)
     except Exception as e:
         my_print('Exception encountered:', e)

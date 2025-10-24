@@ -20,16 +20,21 @@ def main():
     if not args.keep:
         [os.remove(f) for f in file_list if os.path.isfile(f)]
     else:
-        [os.remove(f) for f in get_audio_files(os.getcwd(), supported_audio_files) if f not in file_list]
+        [os.remove(f) for f in get_audio_files(
+            os.getcwd(), supported_audio_files) if f not in file_list]
 
 
 if __name__ == '__main__':
 
-    parser = argparse.ArgumentParser(prog='file remover', description='compares audio files between two directories and'
-                                     ' removes or keeps matching audio files', epilog='')
-    parser.add_argument('path', type=pathlib.Path, help='audio files directory')
+    parser = argparse.ArgumentParser(
+            prog='file remover',
+            description='compares audio files between two directories and'
+            ' removes or keeps matching audio files', epilog='')
+    parser.add_argument('path', type=pathlib.Path,
+                        help='audio files directory')
     parser.add_argument('-k', '--keep', action='store_true',
-                        help='keep option: Keeps matching audio files and removes the rest')
+                        help='keep option: Keeps matching audio files'
+                        ' and removes the rest')
     args = parser.parse_args()
 
     try:
