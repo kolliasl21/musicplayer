@@ -1,6 +1,6 @@
 #!/bin/bash
 
-DAY=$(date | awk '{print $1}')
+DAY=$(date +%a)
 
 musicplayer() {
 	/home/user/scripts/musicplayer.py \
