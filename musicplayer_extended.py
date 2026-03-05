@@ -289,7 +289,7 @@ class Musicplayer:
         if kwargs.get('loop', False) is True:
             loop = True
 
-        clamp = lambda n: max(min(2, n), 0.001)
+        def clamp(n): return max(min(2, n), 0.001)
         millibels = 2000*log10(clamp(self.audio_gain))
         self.args_list = [
             'omxplayer',
@@ -471,7 +471,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             prog='musicplayer',
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description=textwrap.dedent('''\
+            description=textwrap.dedent('''
 
             Custom cli musicplayer
 

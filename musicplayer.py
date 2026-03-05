@@ -414,7 +414,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             prog='musicplayer',
             formatter_class=argparse.RawDescriptionHelpFormatter,
-            description=textwrap.dedent('''\
+            description=textwrap.dedent('''
 
             Custom cli musicplayer
 
