@@ -11,7 +11,7 @@ from threading import Thread
 
 def my_print(*args, **kwargs):
     if verbose > 1:
-        args = (time.strftime('%D - %H:%M:%S :'),) + args
+        args = (time.strftime('%d/%m/%y - %T :'),) + args
     print(*args, **kwargs)
 
 
