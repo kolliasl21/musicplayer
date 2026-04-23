@@ -261,6 +261,10 @@ class Musicplayer:
         if self._p is not None:
             return self._p.poll()
 
+    def pid(self):
+        if self._p is not None:
+            return self._p.pid
+
 
 def load_musicplayer(pq, filepath, current_audio_file, timer_start,
                      timer_stop):
@@ -455,7 +459,7 @@ if __name__ == '__main__':
     parser.add_argument('-g', '--gain', type=float, default=1.00,
                         help='Audio gain \"default GAIN = 1.00\"')
     parser.add_argument('-f', '--fade', type=float, default=0.00,
-                        help='Crossfade (sedonds). Requires --no-controls '
+                        help='Crossfade (seconds). Requires --no-controls '
                         '\"default = 0.00\"')
     parser.add_argument('-c', '--ctrl-c', action='store_true',
                         help='Skip tracks with ctrl+c on cli')
