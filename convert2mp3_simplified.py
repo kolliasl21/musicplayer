@@ -8,7 +8,7 @@ import argparse
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 
-def cleanup(files):
+def cleanup(*files):
     [os.remove(f) for f in files if os.path.isfile(f)]
 
 

@@ -15,7 +15,7 @@ def my_print(*args, **kwargs):
     print(*args, **kwargs)
 
 
-def cleanup(files):
+def cleanup(*files):
     [os.remove(f) for f in files if os.path.isfile(f)]
 
 
@@ -335,5 +335,5 @@ if __name__ == '__main__':
         output_files = [f for f in output_files if f not in completed_files]
         raise SystemExit(1)
     finally:
-        cleanup(output_files)
+        cleanup(*output_files)
         remove_empty_directories(target_directory)
