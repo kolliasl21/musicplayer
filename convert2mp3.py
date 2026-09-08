@@ -78,7 +78,7 @@ def get_audio_file_duration(audio_file):
     return duration
 
 
-def normalize_files(input_file, output_file, mode):
+def normalize_audio_files(input_file, output_file, mode):
     return subprocess.Popen([
         'ffmpeg-normalize',
         input_file,
@@ -119,11 +119,11 @@ def convert_files(input_file, output_file):
     ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 
 
-def scan_audio_files(audio_files):
+def scan_media_files(audio_files, func):
     thread_list = []
     proc_list = []
     for file in audio_files:
-        thread = Thread(target=print_bitrate_info, args=(file,))
+        thread = Thread(target=func, args=(file,))
         thread_list.append(thread)
         thread.start()
         for thread in thread_list:
@@ -142,14 +142,14 @@ def select_func(input_file, output_file):
         return convert_files(input_file, output_file)
     elif directory == 'fade':
         return audio_fade(input_file, output_file, fade_in, fade_out)
-    return normalize_files(input_file, output_file, normalized_mode)
+    return normalize_audio_files(input_file, output_file, normalize_mode)
 
 
 def update_completed_files():
     if enable_log:
         [print_to_file(
             log_file, os.path.splitext(p.args[
-                argument_index_list[0]])[0]+'.mp3')
+                argument_index_list[0]])[0]+file_suffix)
          for p in process_list if p.poll() == 0]
     [completed_files.append(p.args[argument_index_list[1]])
      for p in process_list if p.poll() == 0]
@@ -183,7 +183,8 @@ def main():
     if enable_log:
         [print_to_file(log_file, f) for f in completed_files]
     for f in files:
-        output = os.path.join(target_directory, os.path.splitext(f)[0]+'.mp3')
+        output = os.path.join(target_directory,
+                              os.path.splitext(f)[0]+file_suffix)
         output_files.append(output)
         process_list.append(select_func(f, output))
         if len(process_list) > subprocess_limit - 1:
@@ -229,12 +230,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             prog='convert2mp3',
             description='Convert audio files to .mp3 files', epilog='')
-    parser.add_argument('-o', '--output', choices=['default', 'normalized',
+    parser.add_argument('-o', '--output', choices=['default', 'normalize',
                                                    'fade', 'scan'],
-                        default='default', help='normalized option: Normalizes'
+                        default='default', help='normalize option: Normalizes'
                         ' volume on all audio files')
     parser.add_argument('-m', '--mode', choices=['ebu', 'rms', 'peak'],
-                        default='ebu', help='Normalized modes, default=ebu')
+                        default='ebu', help='Normalize modes, default=ebu')
     parser.add_argument('-l', '--limit', type=int, default=cpu_count,
                         help='limit subprocesses spawned')
     parser.add_argument('-c', '--clean', action='store_true',
@@ -261,7 +262,7 @@ if __name__ == '__main__':
     process_list = []
     supported_files = [".mp3", ".wma", ".m4a", ".webm", ".wav", ".mp4"]
     directory = 'normalized'
-    normalized_mode = args.mode
+    normalize_mode = args.mode
     argument_index_list = [1, 11]
     fade_in = abs(args.fade_in)
     fade_out = abs(args.fade_out)
@@ -270,6 +271,7 @@ if __name__ == '__main__':
     log_file = os.path.join(
             os.path.dirname(os.path.abspath(__file__)), log_file_name)
     reset_log_at_startup = True
+    file_suffix = '.mp3'
 
     files = get_files(os.getcwd(), supported_files)
 
@@ -281,7 +283,7 @@ if __name__ == '__main__':
         argument_index_list = [2, 5]
     elif args.output == 'scan':
         try:
-            scan_audio_files(files)
+            scan_media_files(files, print_bitrate_info)
             raise SystemExit(0)
         except KeyboardInterrupt:
             print('Program interrupted')

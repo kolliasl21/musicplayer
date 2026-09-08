@@ -64,8 +64,7 @@ def get_file_list(file, file_extensions):
     if os.path.isfile(file):
         with open(file, 'r', encoding='utf-8') as fp:
             audio_files = [
-                    line.rstrip()
-                    for line in fp
+                    line.rstrip() for line in fp
                     if any(line.rstrip().endswith(ext)
                            for ext in file_extensions)]
             audio_files.sort()
@@ -357,8 +356,7 @@ def main(p):
         elif track in previous_tracks[-3:] and len(audio_files) > 9:
             if verbose > 0:
                 my_print('Skipping "{}" in last 3 '
-                         'previously played tracks list...'
-                         .format(track))
+                         'previously played tracks list...'.format(track))
             if force_reload_list:
                 break
 

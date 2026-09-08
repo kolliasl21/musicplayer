@@ -644,7 +644,7 @@ if __name__ == '__main__':
         my_print('------Start------')
 
     if fade > 0 and not no_controls:
-        my_print('Crossfade requires --no-controls!')
+        my_print('Error: Crossfade requires --no-controls! Ignoring option.')
 
     try:
         while True:

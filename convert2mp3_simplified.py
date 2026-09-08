@@ -71,7 +71,7 @@ def get_audio_file_duration(audio_file):
     return duration
 
 
-def normalize_files(input_file, output_file, mode):
+def normalize_audio_files(input_file, output_file, mode):
     result = subprocess.run([
         'ffmpeg-normalize',
         input_file,
@@ -115,9 +115,9 @@ def convert_files(input_file, output_file):
     return result.returncode
 
 
-def scan_audio_files(audio_files):
+def scan_media_files(audio_files, func):
     with ThreadPoolExecutor(max_workers=subprocess_limit) as e:
-        e.map(print_bitrate_info, files, chunksize=subprocess_limit)
+        e.map(func, files, chunksize=subprocess_limit)
 
 
 def select_func(input_file, output_file):
@@ -127,12 +127,13 @@ def select_func(input_file, output_file):
     elif directory == 'fade':
         returncode = audio_fade(input_file, output_file, fade_in, fade_out)
     else:
-        returncode = normalize_files(input_file, output_file, normalized_mode)
+        returncode = normalize_audio_files(input_file,
+                                           output_file, normalize_mode)
     if verbose == 1:
         print('Return code: {:3}, Processed file: {}'.format(
             returncode, input_file))
     elif verbose > 1 and returncode == 0:
-        print(os.path.splitext(input_file)[0]+'.mp3')
+        print(os.path.splitext(input_file)[0]+file_suffix)
 
 
 def draw_progress_bar(status):
@@ -159,7 +160,8 @@ def main():
     print('Converting files to .mp3 with {} option...'.format(args.output))
 
     for f in files:
-        output = os.path.join(target_directory, os.path.splitext(f)[0]+'.mp3')
+        output = os.path.join(target_directory,
+                              os.path.splitext(f)[0]+file_suffix)
         output_files.append(output)
 
     with ThreadPoolExecutor(max_workers=subprocess_limit) as e:
@@ -186,12 +188,12 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
             prog='convert2mp3',
             description='Convert audio files to .mp3 files', epilog='')
-    parser.add_argument('-o', '--output', choices=['default', 'normalized',
+    parser.add_argument('-o', '--output', choices=['default', 'normalize',
                                                    'fade', 'scan'],
-                        default='default', help='normalized option: Normalizes'
+                        default='default', help='normalize option: Normalizes'
                         ' volume on all audio files')
     parser.add_argument('-m', '--mode', choices=['ebu', 'rms', 'peak'],
-                        default='ebu', help='Normalized modes, default=ebu')
+                        default='ebu', help='Normalize modes, default=ebu')
     parser.add_argument('-l', '--limit', type=int, default=cpu_count,
                         help='limit subprocesses spawned')
     parser.add_argument('-v', '--verbose', action='count', default=0,
@@ -209,9 +211,10 @@ if __name__ == '__main__':
         subprocess_limit = max_subprocess_limit
     supported_files = [".mp3", ".wma", ".m4a", ".webm", ".wav", ".mp4"]
     directory = 'normalized'
-    normalized_mode = args.mode
+    normalize_mode = args.mode
     fade_in = abs(args.fade_in)
     fade_out = abs(args.fade_out)
+    file_suffix = '.mp3'
 
     files = get_files(os.getcwd(), supported_files)
 
@@ -220,7 +223,7 @@ if __name__ == '__main__':
     elif args.output == 'fade':
         directory = 'fade'
     elif args.output == 'scan':
-        scan_audio_files(files)
+        scan_media_files(files, print_bitrate_info)
         raise SystemExit(0)
 
     target_directory = os.path.join(os.getcwd(), directory)
