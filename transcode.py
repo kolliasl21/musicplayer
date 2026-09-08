@@ -1,0 +1,392 @@
+#!/usr/bin/env python3
+
+import os
+import subprocess
+import time
+from musicplayer import get_audio_files as get_files
+from musicplayer import print_to_file
+import argparse
+from threading import Thread
+
+
+def my_print(*args, **kwargs):
+    if verbose > 1:
+        args = (time.strftime('%d/%m/%y - %T :'),) + args
+    print(*args, **kwargs)
+
+
+def cleanup(*files):
+    [os.remove(f) for f in files if os.path.isfile(f)]
+
+
+def remove_empty_directories(*directories):
+    [os.removedirs(directory) for directory in directories
+     if os.path.exists(directory) and not os.listdir(directory)]
+
+
+def get_bitrate_or_samplerate_int(stream_opt, audio_file):
+    result = subprocess.run([
+        'ffprobe',
+        '-v',
+        'error',
+        '-select_streams',
+        'a:0',
+        '-show_entries',
+        'stream='+str(stream_opt),
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        audio_file
+    ], capture_output=True, text=True)
+    return int(result.stdout)
+
+
+def get_bitrate_and_samplerate_raw(audio_file):
+    result = subprocess.run([
+        'ffprobe',
+        '-v',
+        'error',
+        '-select_streams',
+        'a:0',
+        '-show_entries',
+        'stream=bit_rate',
+        '-show_entries',
+        'stream=sample_rate',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        audio_file
+    ], capture_output=True, text=True)
+    return result.stdout
+
+
+def print_bitrate_info(audio_file):
+    output = get_bitrate_and_samplerate_raw(audio_file)
+    print(output.replace('\n', ' '), audio_file)
+
+
+def get_audio_file_duration(audio_file):
+    result = subprocess.run([
+        'ffprobe',
+        '-v',
+        'error',
+        '-show_entries',
+        'format=duration',
+        '-of',
+        'default=noprint_wrappers=1:nokey=1',
+        audio_file
+    ], capture_output=True, text=True)
+    duration = float(result.stdout)
+    return duration
+
+
+def normalize_audio_files(input_file, output_file, mode):
+    return subprocess.Popen([
+        'ffmpeg-normalize',
+        input_file,
+        '-nt',
+        mode,
+        '-c:a',
+        'libmp3lame',
+        '-b:a',
+        '128k',
+        '-ext',
+        'mp3',
+        '-o',
+        output_file
+    ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+
+
+def audio_fade(input_file, output_file, fade_in_sec=2, fade_out_sec=2):
+    duration = get_audio_file_duration(input_file)
+    return subprocess.Popen([
+        'ffmpeg',
+        '-i',
+        input_file,
+        '-af',
+        'afade=in:st=0:d='+str(fade_in_sec)+''
+        ',afade=out:st='+str(duration-fade_out_sec)+':d='+str(fade_out_sec),
+        output_file,
+        '-n'
+    ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+
+
+def transcode_video_files(input_file, output_file):
+    return subprocess.Popen([
+        'ffmpeg',
+        '-i',
+        input_file,
+        '-threads',
+        'auto',
+        '-c:v',
+        'libx264',
+        '-b:v',
+        '1M',
+        '-crf',
+        '23',
+        '-vf',
+        'scale=-2:720',
+        output_file,
+        '-n'
+    ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+
+
+def extract_subtitles(input_file, output_file):
+    return subprocess.Popen([
+        'ffmpeg',
+        '-i',
+        input_file,
+        '-map',
+        '0:s:{}'.format(subtitle_track),
+        output_file,
+        '-n'
+    ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+
+
+def extract_audio(input_file, output_file):
+    return subprocess.Popen([
+        'ffmpeg',
+        '-i',
+        input_file,
+        output_file,
+        '-n'
+    ], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+
+
+def scan_media_files(audio_files, func):
+    thread_list = []
+    proc_list = []
+    for file in audio_files:
+        thread = Thread(target=func, args=(file,))
+        thread_list.append(thread)
+        thread.start()
+        for thread in thread_list:
+            proc_list = [p for p in thread_list if p.is_alive()]
+            while (len(proc_list) > subprocess_limit - 1):
+                proc_list = [p for p in thread_list if p.is_alive()]
+                time.sleep(0.01)
+        thread_list[:] = [p for p in proc_list if p.is_alive()]
+
+    for thread in thread_list:
+        thread.join()
+
+
+def select_func(input_file, output_file):
+    if directory == 'audio_files':
+        return extract_audio(input_file, output_file)
+    elif directory == 'movie_files':
+        return transcode_video_files(input_file, output_file)
+    elif directory == 'fade':
+        return audio_fade(input_file, output_file, fade_in, fade_out)
+    elif directory == 'subtitles':
+        return extract_subtitles(input_file, output_file)
+    return normalize_audio_files(input_file, output_file, normalize_mode)
+
+
+def update_completed_files():
+    if enable_log:
+        [print_to_file(
+            log_file, os.path.splitext(p.args[
+                argument_index_list[0]])[0]+file_suffix)
+         for p in process_list if p.poll() == 0]
+    [completed_files.append(p.args[argument_index_list[1]])
+     for p in process_list if p.poll() == 0]
+
+
+def draw_progress_bar(status):
+    bar_lenght = 40
+    bar = int((status*bar_lenght)/100)
+    end_ln = '\r'
+    if status < 0:
+        my_print('{}'.format(' '*(bar_lenght+10)), end=end_ln)
+        return None
+    if status == 100:
+        end_ln = '\n'
+    my_print('[{:<{}}] {:.2f}%'.format('='*bar, bar_lenght, status),
+             end=end_ln)
+
+
+def main():
+    start_time = time.time()
+    file_count = len(files)
+    completed_file_count = len(completed_files)
+    if file_count == 0:
+        raise SystemExit('No files found... Raising SystemExit')
+
+    my_print('Transcoding files with {} option...'.format(args.output))
+    files[:] = [f for f in files if os.path.splitext(f)[0]
+                not in [os.path.splitext(p)[0] for p in completed_files]]
+    completed_files[:] = [os.path.join(target_directory, f)
+                          for f in completed_files]
+    if enable_log:
+        [print_to_file(log_file, f) for f in completed_files]
+    for f in files:
+        output = os.path.join(target_directory,
+                              os.path.splitext(f)[0]+file_suffix)
+        output_files.append(output)
+        process_list.append(select_func(f, output))
+        if len(process_list) > subprocess_limit - 1:
+            for proc in process_list:
+                status = (((completed_file_count+len(
+                    output_files)-(len(process_list)))/file_count)*100)
+                draw_progress_bar(status)
+                temp_list = [p for p in process_list if p.poll() is None]
+                while (len(temp_list) > subprocess_limit - 1):
+                    temp_list = [p for p in process_list if p.poll() is None]
+                    time.sleep(0.01)
+                if verbose > 0 and proc.poll() is not None:
+                    my_print('Return code: {:3}, Processed file: {}'
+                             .format(proc.returncode,
+                                     proc.args[argument_index_list[0]]))
+            update_completed_files()
+            process_list[:] = [p for p in temp_list if p.poll() is None]
+
+    for proc in process_list:
+        status = (((completed_file_count+len(output_files)-(
+            len(process_list)-process_list.index(proc)))/file_count)*100)
+        draw_progress_bar(status)
+        proc.wait()
+        if verbose > 0 and proc.poll() is not None:
+            my_print('Return code: {:3}, Processed file: {}'
+                     .format(proc.returncode,
+                             proc.args[argument_index_list[0]]))
+    update_completed_files()
+
+    draw_progress_bar(100)
+    my_print('Completed in {:.2f} seconds'.format(time.time() - start_time))
+    if enable_log:
+        print_to_file(log_file, 'Done')
+
+    output_files[:] = [f for f in output_files if f not in completed_files]
+
+
+if __name__ == '__main__':
+
+    cpu_count = os.cpu_count()
+    max_subprocess_limit = cpu_count * 2
+
+    parser = argparse.ArgumentParser(
+            prog='transcode',
+            description='Transcode movie, audio files', epilog='')
+    parser.add_argument('-o', '--output', choices=['audio', 'normalize',
+                                                   'fade', 'scan', 'movie',
+                                                   'subtitles'],
+                        default='audio', help='normalize option: Normalizes'
+                        ' volume on all audio files'
+                        ', scan: print audio bitrate, subtitles:'
+                        ' extract subtitles')
+    parser.add_argument('-m', '--mode', choices=['ebu', 'rms', 'peak'],
+                        default='ebu', help='Normalize modes, default=ebu')
+    parser.add_argument('-s', '--sub', default=0, help='subtitle track '
+                        'to extract')
+    parser.add_argument('-l', '--limit', type=int, default=cpu_count,
+                        help='limit subprocesses spawned')
+    parser.add_argument('-c', '--clean', action='store_true',
+                        help='Clean target directory when manually '
+                        'interrupting the program')
+    parser.add_argument('-v', '--verbose', action='count', default=0,
+                        help='Increase verbosity level')
+    parser.add_argument('--fade-in', type=float, default=2.00,
+                        help='Fade-in (seconds). \"default = 2.00\"')
+    parser.add_argument('--fade-out', type=float, default=2.00,
+                        help='Fade-out (seconds). \"default = 2.00\"')
+    parser.add_argument('--enable-log', action='store_true',
+                        help='Log program output to transcode.log')
+    parser.add_argument('--rename-log', type=str, default='transcode.log',
+                        help='Rename log file')
+    args = parser.parse_args()
+
+    verbose = args.verbose
+    subprocess_limit = abs(args.limit)
+    if subprocess_limit > max_subprocess_limit:
+        my_print('Maximum subprocess limit is {}'.format(max_subprocess_limit))
+        subprocess_limit = max_subprocess_limit
+    output_files = []
+    process_list = []
+    supported_files = [".mp3", ".wma", ".m4a", ".webm", ".wav", ".mp4",
+                       ".mkv", ".avi", ".srt"]
+    directory = 'normalized'
+    normalize_mode = args.mode
+    argument_index_list = [1, 11]
+    fade_in = abs(args.fade_in)
+    fade_out = abs(args.fade_out)
+    enable_log = args.enable_log
+    log_file_name = args.rename_log
+    log_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), log_file_name)
+    reset_log_at_startup = True
+    subtitle_track = args.sub
+    file_suffix = '.mp3'
+
+    files = get_files(os.getcwd(), supported_files)
+
+    if args.output == 'audio':
+        directory = 'audio_files'
+        argument_index_list = [2, 3]
+    elif args.output == 'fade':
+        directory = 'fade'
+        argument_index_list = [2, 5]
+    elif args.output == 'subtitles':
+        file_suffix = '.srt'
+        directory = 'subtitles'
+        argument_index_list = [2, 5]
+    elif args.output == 'movie':
+        file_suffix = '.avi'
+        directory = 'movie_files'
+        argument_index_list = [2, 13]
+    elif args.output == 'scan':
+        try:
+            scan_media_files(files, print_bitrate_info)
+            raise SystemExit(0)
+        except KeyboardInterrupt:
+            print('Program interrupted')
+            raise SystemExit(0)
+        except Exception as e:
+            print('Exception encountered:', e)
+            raise SystemExit(1)
+
+    target_directory = os.path.join(os.getcwd(), directory)
+
+    if enable_log and not os.path.exists(log_file):
+        open(log_file, 'w').close()
+
+    if reset_log_at_startup and os.path.exists(log_file):
+        open(log_file, 'w').close()
+
+    if enable_log:
+        open(log_file, 'a', encoding='utf-8').writelines(
+                'Completed files in {}\n'.format(target_directory))
+
+    if not os.path.isdir(target_directory):
+        os.mkdir(target_directory)
+
+    completed_files = [f for f in files if os.path.splitext(
+        f)[0] in [os.path.splitext(p)[0] for p in get_files(
+            target_directory, supported_files)]]
+
+    try:
+        main()
+    except KeyboardInterrupt:
+        draw_progress_bar(-1)
+        my_print('Program interrupted')
+        for p in process_list:
+            if args.clean:
+                p.terminate()
+            p.wait()
+        update_completed_files()
+        if enable_log:
+            print_to_file(log_file, 'Program interrupted')
+        if verbose > 0:
+            [my_print('Return code: {:3}, Processed file: {}'.format(
+                          p.returncode,
+                          p.args[argument_index_list[0]]))
+             for p in process_list if p.poll() is not None]
+        if not args.clean:
+            output_files = [f for f in output_files
+                            if f not in completed_files]
+        raise SystemExit(0)
+    except Exception as e:
+        my_print('Exception encountered:', e)
+        output_files = [f for f in output_files if f not in completed_files]
+        raise SystemExit(1)
+    finally:
+        cleanup(*output_files)
+        remove_empty_directories(target_directory)
